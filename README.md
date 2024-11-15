@@ -1,4 +1,4 @@
-itlameda
+# itlameda
 
 ### folder structure
 ```
@@ -29,10 +29,19 @@ itlameda
         * 8083 : MQTT WebSocket
         * 8883 : MQTT TCP(TLS)
         * 8084 : MQTT WebSocket(TLS)
+        * 18083 : EMQ Dashboard
     * HAProxy
         * 9090 : Dashboard
 * usage
 ```
- $ cd infra/emqx/docker-env
- $ docker-compose up --build
-```
+### run docker
+$ cd infra/emqx/docker-env
+$ docker-compose up --build
+```
+
+* eqmx dashboard
+    * url : http://localhost:18083
+    * default admin account : admin / public
+* haproxy stats
+    * url : http://localhost:9090/stats
+
