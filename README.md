@@ -45,3 +45,14 @@ $ docker-compose up --build
 * haproxy stats
     * url : http://localhost:9090/stats
 
+* client usage
+```
+$ cd infra/emqx/node-client
+
+### publisher
+$ node mqtt-publsher.js
+
+### subscriber
+$ node mqtt-subscirber.js
+```
+
