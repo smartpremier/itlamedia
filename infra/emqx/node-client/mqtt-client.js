@@ -1,55 +1,73 @@
 const mqtt = require('mqtt');
-const client = mqtt.connect('mqtt://localhost:1883');
+const readline = require('readline');
 
-const topic = 'test/topic';
-let messageCount = 0;
+// Create readline interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
-// 연결 이벤트
-client.on('connect', () => {
-    console.log('Connected to MQTT broker');
+// Prompt user for MQTT host information
+rl.question('Enter MQTT broker host (e.g., mqtt://localhost:1883): ', (host) => {
+  host = host || 'mqtt://localhost:1883';
+  
+
+  // Connect to MQTT broker with provided host
+  const client = mqtt.connect(host);
+  const topic = 'test/topic';
+  let messageCount = 0;
+
+  client.on('connect', () => {
+    console.log('Connected to MQTT broker at', host);
     
-    // 토픽 구독
+    // Subscribe to a topic
     client.subscribe(topic, (err) => {
-        if (!err) {
-            console.log(`Subscribed to ${topic}`);
-            
-            // 메시지 발행 시작
-            sendMessages();
-        }
+      if (!err) {
+        console.log(`Subscribed to topic: ${topic}`);
+        
+        // Start publishing messages
+        sendMessages();
+      } else {
+        console.error('Subscription error:', err);
+      }
     });
-});
+  });
 
-// 메시지 수신 이벤트
-client.on('message', (topic, message) => {
-    console.log(`Received message on ${topic}: ${message.toString()}`);
-});
+  client.on('message', (topic, message) => {
+    console.log(`Received message from ${topic}: ${message.toString()}`);
+  });
 
-// 에러 이벤트
-client.on('error', (err) => {
-    console.error('Connection error:', err);
-});
+  client.on('error', (error) => {
+    console.error('MQTT client error:', error);
+  });
 
-// 연결 끊김 이벤트
-client.on('close', () => {
+  client.on('close', () => {
     console.log('Connection closed');
-});
+  });
 
-// 메시지 발행 함수
-function sendMessages() {
+  // Function to publish messages periodically
+  function sendMessages() {
     setInterval(() => {
-        messageCount++;
-        const message = `Test message ${messageCount}`;
-        client.publish(topic, message, { qos: 1 }, (err) => {
-            if (!err) {
-                console.log(`Published: ${message}`);
-            }
-        });
-    }, 2000); // 2초마다 메시지 발행
-}
+      messageCount++;
+      const message = `Test message ${messageCount}`;
+      client.publish(topic, message, { qos: 1 }, (err) => {
+        if (!err) {
+          console.log(`Published: ${message}`);
+        }
+      });
+    }, 2000); // Publish every 2 seconds
+  }
 
-// 프로그램 종료 처리
-process.on('SIGINT', () => {
+  // Handle program exit
+  rl.on('close', () => {
     console.log('Closing MQTT connection...');
     client.end();
     process.exit();
+  });
+
+  process.on('SIGINT', () => {
+    console.log('Closing MQTT connection...');
+    client.end();
+    process.exit();
+  });
 });
