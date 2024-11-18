@@ -27,8 +27,13 @@ bootstrap:
         max_replication_slots: 10
         wal_keep_segments: 100
       pg_hba:
-        - host replication replicator all md5
-        - host all all all md5
+        - local   all             all                                   trust
+        - local   all             postgres                             trust
+        - local   replication     all                                  trust
+        - host    all             all             127.0.0.1/32        scram-sha-256
+        - host    all             all             ::1/128             scram-sha-256
+        - host    replication     replicator      all                 md5
+        - host    all             all             all                 md5
 
   initdb:
     - encoding: UTF8
