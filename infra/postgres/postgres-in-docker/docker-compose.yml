@@ -1,0 +1,99 @@
+version: '3'
+
+networks:
+  postgres_network:
+    driver: bridge
+
+services:
+  etcd:
+    image: bitnami/etcd:latest
+    networks:
+      - postgres_network
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_NAME=etcd1
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
+      - ETCD_INITIAL_CLUSTER=etcd1=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+      - ETCD_ENABLE_V2=true  # Enable v2 API
+    ports:
+      - 2379:2379
+      - 2380:2380
+
+  postgres1:
+    build: 
+      context: ./patroni
+      dockerfile: Dockerfile
+    networks:
+      - postgres_network
+    hostname: postgres1
+    environment:
+      - PATRONI_NAME=postgres1
+      - PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432
+      - PATRONI_POSTGRESQL_CONNECT_ADDRESS=postgres1:5432
+      - PATRONI_RESTAPI_LISTEN=0.0.0.0:8008
+      - PATRONI_RESTAPI_CONNECT_ADDRESS=postgres1:8008
+      - PATRONI_ETCD_HOST=etcd:2379
+      - PATRONI_ETCD_PROTOCOL_VERSION=3
+      - PATRONI_SCOPE=postgres-cluster
+      - PATRONI_POSTGRESQL_DATA_DIR=/data/patroni
+      - PATRONI_POSTGRESQL_PGPASS=/tmp/pgpass
+      - PATRONI_POSTGRESQL_ADMIN_PASSWORD=admin
+      - PATRONI_POSTGRESQL_REPLICATION_PASSWORD=replicator
+    volumes:
+      - postgres1-data:/data
+    ports:
+      - "5432:5432"
+      - "8008:8008"
+    depends_on:
+      - etcd
+
+  postgres2:
+    build:
+      context: ./patroni
+      dockerfile: Dockerfile
+    networks:
+      - postgres_network
+    hostname: postgres2
+    environment:
+      - PATRONI_NAME=postgres2
+      - PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432
+      - PATRONI_POSTGRESQL_CONNECT_ADDRESS=postgres2:5432
+      - PATRONI_RESTAPI_LISTEN=0.0.0.0:8008
+      - PATRONI_RESTAPI_CONNECT_ADDRESS=postgres2:8008
+      - PATRONI_ETCD_HOST=etcd:2379
+      - PATRONI_ETCD_PROTOCOL_VERSION=3
+      - PATRONI_SCOPE=postgres-cluster
+      - PATRONI_POSTGRESQL_DATA_DIR=/data/patroni
+      - PATRONI_POSTGRESQL_PGPASS=/tmp/pgpass
+      - PATRONI_POSTGRESQL_ADMIN_PASSWORD=admin
+      - PATRONI_POSTGRESQL_REPLICATION_PASSWORD=replicator
+    volumes:
+      - postgres2-data:/data
+    ports:
+      - "5433:5432"
+      - "8009:8008"
+    depends_on:
+      - etcd
+
+  haproxy:
+    image: haproxy:2.6
+    networks:
+      - postgres_network
+    user: root
+    volumes:
+      - ./haproxy:/usr/local/etc/haproxy:ro
+    ports:
+      - "5888:5888"
+      - "9090:9090"
+    depends_on:
+      - postgres1
+      - postgres2
+
+volumes:
+  postgres1-data:
+  postgres2-data:
