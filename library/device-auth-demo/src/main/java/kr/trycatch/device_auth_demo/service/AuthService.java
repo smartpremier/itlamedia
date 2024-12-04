@@ -35,16 +35,25 @@ public class AuthService {
             throw new IllegalArgumentException("Refresh token is invalid!");
         }
 
-        String deviceId = jwtTokenProvider.getDeviceId(refreshToken);
-        Device device = deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new DeviceNotFoundException("Device not found!"));
+        try {
+            String deviceId = jwtTokenProvider.getDeviceId(refreshToken);
+            Device device = deviceRepository.findByDeviceId(deviceId)
+                    .orElseThrow(() -> new DeviceNotFoundException("Device not found!"));
 
-        if (!refreshToken.equals(device.getRefreshToken())) {
-            throw new InvalidTokenException("Refresh token is mismatch");
+            if (!refreshToken.equals(device.getRefreshToken())) {
+                throw new InvalidTokenException("Refresh token is mismatch");
+            }
+
+            String newAccessToken = jwtTokenProvider.createAccessToken(deviceId);
+            String newRefreshToken = jwtTokenProvider.createRefreshToken(deviceId);
+
+            device.updateRefreshToken(newRefreshToken);
+
+            return new TokenDto(newAccessToken, newRefreshToken);
+        } catch (Exception e) {
+            throw new InvalidTokenException("Failed to refresh token token: " + e.getMessage());
         }
 
-        String newAccessToken = jwtTokenProvider.createAccessToken(deviceId);
-        return new TokenDto(newAccessToken, refreshToken);
     }
 
 }
